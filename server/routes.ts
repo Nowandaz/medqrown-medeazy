@@ -20,16 +20,27 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction) {
+    app.set("trust proxy", 1);
+  }
+
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "medqrown-secret-key",
       resave: false,
       saveUninitialized: false,
-      cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 },
+      cookie: {
+        secure: isProduction,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: isProduction ? "lax" : undefined,
+      },
     })
   );
 
-  registerObjectStorageRoutes(app);
+  if (process.env.REPL_ID) {
+    registerObjectStorageRoutes(app);
+  }
 
   // Admin Auth
   app.post("/api/admin/login", async (req, res) => {
